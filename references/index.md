@@ -24,6 +24,7 @@
 | **[references/templates.md](templates.md)** | 操作/学习/进化报告模板 |
 | **[references/pitfalls.md](pitfalls.md)** | 散户亏损反模式清单 |
 | **[references/feedback-loop.md](feedback-loop.md)** | 反馈循环与进化机制 |
+| **[references/tgb-sentiment.md](tgb-sentiment.md)** | TGB情绪分析、大V观点整合 |
 
 ---
 
@@ -47,6 +48,7 @@ a-shares-master/
 │   ├── templates.md           # 报告模板
 │   ├── pitfalls.md            # 反模式
 │   ├── feedback-loop.md      # 反馈循环
+│   ├── tgb-sentiment.md      # TGB情绪分析
 │   │
 │   ├── guides/                # 架构指南
 │   │   ├── ARCHITECTURE.md
@@ -101,6 +103,7 @@ a-shares-master/
 | **安装配置** | references/INSTALL.md |
 | **理解评级** | references/rating.md |
 | **分析股票** | references/four-dimensions.md |
+| **TGB情绪** | references/tgb-sentiment.md |
 | **选股** | references/scenes.md, workflows/high-pr-picker.md |
 | **诊股** | references/scenes.md, references/anchors.md |
 | **风控扫描** | references/rules.md, scripts/check_risk.py |
