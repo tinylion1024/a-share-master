@@ -1,19 +1,49 @@
 ---
 name: a-shares-master
-description: "【触发时机】当用户提到A股分析、炒股、选股、盘前/盘后复盘、风险扫描、交易计划等场景时触发。【功能】A股全能策略系统，集成盘前预判、盘中监控、盘后复盘、智能选股、风险控制五大模块，支持四维分析法（新闻/政策、情绪/资金、流动性/技术、风险/合规）与双引擎驱动（MX数据+社区情绪）。【不适用】美股、港股、数字货币、期货/期权、基本面长期投资。"
+description: "【触发时机】当用户提到A股分析、炒股、选股、盘前/盘后复盘、风险扫描、交易计划等场景时触发。【功能】A股全能策略系统，集成盘前预判、盘中监控、盘后复盘、智能选股、风险控制五大模块，支持四维分析法（新闻/政策、情绪/资金、流动性/技术、风险/合规）与双引擎驱动（MX数据+社区情绪）。【不适用】美股、港股、数字货币、期货/期权、基本面长期投资。【依赖检查】首次使用前必须检查 depends_on 中的 skill 是否已安装，参见下方「依赖检查」章节。"
 depends_on:
-  - mx-stocks-screener   # 选股筛选
-  - mx-finance-data      # 技术数据
-  - mx-financial-assistant # 财务分析
-  - mx-finance-search     # 新闻/政策搜索
-  - mx-data               # 市场数据
-  - taoguba-hot          # 社区情绪
+  - mx-stocks-screener   # 选股筛选（必须）
+  - mx-finance-data      # 技术数据（必须）
+  - mx-financial-assistant # 财务分析（必须）
+  - mx-finance-search     # 新闻/政策搜索（必须）
+  - mx-data               # 市场数据（必须）
+  - taoguba-hot          # 社区情绪（必须）
 env:
   - MX_APIKEY             # MX API 密钥
   - EM_API_KEY            # EM API 密钥
 ---
 
 # A股全能策略系统 (A-Shares Master)
+
+## 依赖检查（Dependency Check）
+
+**首次使用前，必须先检查依赖 skill 是否已安装：**
+
+```bash
+# 检查依赖 skill 是否存在
+for skill in mx-stocks-screener mx-finance-data mx-financial-assistant mx-finance-search mx-data taoguba-hot; do
+  if [ -d "$HOME/.claude/skills/$skill" ]; then
+    echo "✅ $skill"
+  else
+    echo "❌ $skill - 未安装"
+  fi
+done
+```
+
+**缺失的 skill 安装方法：**
+
+| Skill | 安装命令 | 说明 |
+|-------|---------|------|
+| `mx-stocks-screener` | `/install mx-stocks-screener` | 选股筛选 |
+| `mx-finance-data` | `/install mx-finance-data` | 技术数据 |
+| `mx-financial-assistant` | `/install mx-financial-assistant` | 财务分析 |
+| `mx-finance-search` | `/install mx-finance-search` | 新闻/政策搜索 |
+| `mx-data` | `/install mx-data` | 市场数据 |
+| `taoguba-hot` | `/install taoguba-hot` | 社区情绪 |
+
+> **重要**：依赖未安装时，skill 部分功能将无法使用。请先完成依赖安装。
+
+---
 
 ## Overview
 
