@@ -72,49 +72,41 @@ env:
 
 ---
 
-## Step 0：需求澄清
+## Step 0：需求澄清 + 场景识别
+
+首先识别用户需要的场景，然后收集必要信息：
+
+### 场景识别
+
+| 用户需求 | 场景 | SOP |
+|----------|------|-----|
+| **赚钱引擎** | | |
+| 不知道买什么 | 选股 | [flow/make-money/stock-picker.md](references/flow/make-money/stock-picker.md) |
+| 纠结买不买 | 诊股 | [flow/make-money/stock-diagnosis.md](references/flow/make-money/stock-diagnosis.md) |
+| 纠结卖不卖 | 持仓诊断 | [flow/make-money/position-diagnosis.md](references/flow/make-money/position-diagnosis.md) |
+| 被套了 | 解套 | [flow/make-money/unstuck.md](references/flow/make-money/unstuck.md) |
+| 亏多少必须走 | 止损 | [flow/make-money/stop-loss.md](references/flow/make-money/stop-loss.md) |
+| 赚多少要跑 | 止盈 | [flow/make-money/take-profit.md](references/flow/make-money/take-profit.md) |
+| **学习引擎** | | |
+| 今天怎么看 | 大盘前瞻 | [flow/learn/market-outlook.md](references/flow/learn/market-outlook.md) |
+| 为什么涨/跌 | 大盘总结 | [flow/learn/market-summary.md](references/flow/learn/market-summary.md) |
+| 操作对吗 | 每日复盘 | [flow/learn/daily-review.md](references/flow/learn/daily-review.md) |
+| 为什么涨/跌 | 案例拆解 | [flow/learn/case-analysis.md](references/flow/learn/case-analysis.md) |
+| 为什么亏 | 错误反思 | [flow/learn/error-reflection.md](references/flow/learn/error-reflection.md) |
+| 怎么赚到的 | 经验沉淀 | [flow/learn/experience.md](references/flow/learn/experience.md) |
+| **进化引擎** | | |
+| 记录这笔 | 案例记录 | [flow/evolve/case-record.md](references/flow/evolve/case-record.md) |
+| 更新规则 | 规律更新 | [flow/evolve/rule-update.md](references/flow/evolve/rule-update.md) |
+| 调整参数 | 模型优化 | [flow/evolve/model-tune.md](references/flow/evolve/model-tune.md) |
+
+### 必要信息确认
 
 | 问题 | 选项 |
 |------|------|
-| 分析类型？ | 买入前 / 持仓诊断 / 解套 |
 | 持仓周期？ | 短线(5日) / 中线(20日) / 长线(60日) |
 | 风险偏好？ | 保守型 / 平衡型 / 激进型 |
 
----
-
-## 能力场景
-
-**赚钱引擎（6场景）**
-
-| 场景 | 触发词 | 输出 |
-|------|--------|------|
-| 选股 | "什么能赚钱" | 机会清单 + 理由 |
-| 诊股 | "能买XXX吗" | 买/观望/不买 + 价位 |
-| 持仓诊断 | "我要卖吗" | 持有/加/减/清 |
-| 解套 | "被套了" | 补仓/割肉/换股 |
-| 止损 | "亏多少走" | 止损价 + 纪律 |
-| 止盈 | "赚多少跑" | 目标价 + 分批 |
-
-**学习引擎（6场景）**
-
-| 场景 | 触发词 | 输出 |
-|------|--------|------|
-| 大盘前瞻 | "今天怎么看" | 方向 + 仓位 |
-| 大盘总结 | "为什么涨/跌" | 归因 + 规律 |
-| 每日复盘 | "我操作对吗" | 对错 + 改进 |
-| 案例拆解 | "为什么涨" | 深层逻辑 |
-| 错误反思 | "为什么亏" | 归因 + 改进 |
-| 经验沉淀 | "怎么赚到的" | 成功逻辑 |
-
-**进化引擎（3场景）**
-
-| 场景 | 触发词 | 输出 |
-|------|--------|------|
-| 案例记录 | "记录这笔" | 归档案例库 |
-| 规律更新 | "更新规则" | 规则优化 |
-| 模型优化 | "调整参数" | 参数/权重 |
-
-> 详细：[references/guides/scenes.md](references/guides/scenes.md)
+> 详细SOP：[references/flow/README.md](references/flow/README.md)
 
 ---
 
@@ -231,6 +223,7 @@ env:
 
 | 文档 | 内容 |
 |------|------|
+| [references/flow/README.md](references/flow/README.md) | 15场景SOP索引 |
 | [references/core/rating/](references/core/rating/) | 四维评分详解 |
 | [references/core/four-dimensions.md](references/core/four-dimensions.md) | 三维分析详解 |
 | [references/core/tgb-sentiment.md](references/core/tgb-sentiment.md) | TGB情绪分析 |
