@@ -235,6 +235,7 @@ env:
 | [references/core/four-dimensions.md](references/core/four-dimensions.md) | 三维分析详解 |
 | [references/core/tgb-sentiment.md](references/core/tgb-sentiment.md) | TGB情绪分析 |
 | [references/guides/rules.md](references/guides/rules.md) | 硬规则详解 |
+| [references/guides/data-sources.md](references/guides/data-sources.md) | 数据源指南 |
 | [references/guides/scenes.md](references/guides/scenes.md) | 场景体系 |
 | [references/guides/anchors.md](references/guides/anchors.md) | 买卖锚点 |
 | [references/install.md](references/install.md) | 安装指南 |

@@ -22,6 +22,8 @@
 
 | 文件 | 内容 | 路径 |
 |------|------|------|
+| **[guides/rules.md](guides/rules.md)** | 七条硬规则 | references/guides/ |
+| **[guides/data-sources.md](guides/data-sources.md)** | 数据源选择与可信度控制 | references/guides/ |
 | **[guides/anchors.md](guides/anchors.md)** | 买卖锚点、仓位模型、止损原则 | references/guides/ |
 | **[guides/templates.md](guides/templates.md)** | 操作/学习/进化报告模板 | references/guides/ |
 | **[guides/pitfalls.md](guides/pitfalls.md)** | 散户亏损反模式清单 | references/guides/ |
@@ -68,6 +70,7 @@ a-shares-master/
 │   │
 │   ├── guides/                # 操作指南
 │   │   ├── rules.md          # 七条硬规则
+│   │   ├── data-sources.md  # 数据源指南
 │   │   ├── anchors.md        # 买卖锚点
 │   │   ├── scenes.md         # 15场景体系
 │   │   ├── templates.md      # 报告模板
