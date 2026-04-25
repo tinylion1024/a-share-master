@@ -1,0 +1,178 @@
+---
+name: a-shares-master
+description: "【触发时机】当用户提到A股分析、炒股、选股、盘前/盘后复盘、风险扫描、交易计划等场景时触发。【功能】A股全能策略系统，集成盘前预判、盘中监控、盘后复盘、智能选股、风险控制五大模块，支持四维分析法（新闻/政策、情绪/资金、流动性/技术、风险/合规）与双引擎驱动（MX数据+社区情绪）。【不适用】美股、港股、数字货币等其他市场。"
+depends_on:
+  - mx-stocks-screener   # 选股筛选
+  - mx-finance-data      # 技术数据
+  - mx-financial-assistant # 财务分析
+  - mx-finance-search     # 新闻/政策搜索
+  - mx-data               # 市场数据
+  - taoguba-hot          # 社区情绪
+env:
+  - MX_APIKEY             # MX API 密钥
+  - EM_API_KEY            # EM API 密钥
+---
+
+# A股全能策略系统 (A-Shares Master)
+
+## Overview
+
+A-Shares Master 是 A 股智能分析生态系统，通过整合**权威数据源（MX）**与**社区情绪（淘股吧/雪球）**，提供从盘前预判到交易执行的全链路支持。
+
+**核心能力**：四维分析法 + 双引擎驱动 + 五大模块 + 四级评级体系
+
+---
+
+## 核心分析维度 (4D Analysis)
+
+### A. 新闻与政策 (News & Policy)
+- 数据源：`mx-finance-search`
+- 关键词：加息/降息、地缘政治、行业政策、顶层意见、供应链断供
+- 逻辑：区分"消息提前消化"还是"超预期催化"
+
+### B. 情绪与资金 (Sentiment & Capital)
+- 数据源：`taoguba-hot` / `mx-search`
+- 指标：散户恐慌度、游资抱团点、V 共识、连板梯队
+- 逻辑：寻找"情绪与价格"的背离
+
+### C. 市场模式与流动性 (Market Regime)
+- 数据源：`mx-finance-data` / `mx-data`
+- 模式：天量震荡(>1.5T) / 缩量盘整(<0.8T) / 缩量上涨
+- 分析：主力净流入 vs. 中小单净流出
+
+### D. 风险与合规 (Risk & Compliance)
+- **强制执行**：推荐前必须通过 `check_risk.py` 扫描
+- 红线：立案调查、退市预警(*ST)、大比例减持、业绩巨亏
+
+---
+
+## 四维评级体系 (Rating System)
+
+| 维度 | 等级 | 含义 |
+|------|------|------|
+| **Risk** | R1/R2/R3 | 低/中/高风险 |
+| **Opportunity** | O1/O2/O3 | 大/中/小机会 |
+| **Certainty** | C1/C2/C3 | 高/中/低确定性 |
+| **Comfort** | ⭐(1-5) | 买入舒适度 |
+
+### 舒适度判定
+
+| 星级 | 情形 |
+|------|------|
+| ⭐⭐⭐⭐⭐ | 底部分歧转一致、缩量回踩均线、行业中军稳步放量 |
+| ⭐⭐⭐ | 追涨非一字板龙头、板块内跟涨 |
+| ⭐ | 一字板排单、高位放量分歧、业绩盲盒期 |
+
+---
+
+## 业绩窗口期硬约束 (Earnings Season)
+
+| 时间窗口 | 风险处置 |
+|---------|---------|
+| 4月20日-30日 | 高位股默认 R3/C3 |
+| 8月20日-31日 | 中报窗口期 |
+| 10月20日-31日 | 三季报窗口期 |
+
+---
+
+## 执行模块 (Execution Modules)
+
+### 1. 盘前分析 (Pre-Market)
+生成开盘前哨站报告：隔夜美股/A50、晨间政策利好、昨日连板梯队、今日竞价预期
+
+### 2. 盘中监控 (Intraday)
+实时成交量监控（10:30/13:30/14:30）、流动性模式判定、情绪转折预警
+
+### 3. 盘后复盘 (Post-Market)
+主力资金流向、涨跌停分布、龙头归因、次日机会点
+
+### 4. 智能选股 (Stock Picker)
+三重过滤器：基本面(PE<25) + 技术面(贴近均线) + 催化确认(政策/供应链)
+
+### 5. 风险扫描 (Risk Check)
+**强制执行**：`python3 scripts/check_risk.py --code 300750`
+输出 R3 红线检测结果
+
+### 6. 交易计划 (Trading Plan)
+双场景计划：乐观触发条件+目标价位 vs 悲观风险信号+止损条件
+
+---
+
+## 输出报告标准模板
+
+```markdown
+### 📊 [股票简称] 分析报告 [日期]
+
+- **评级**：Risk: R[N] | Opp: O[N] | Cert: C[N] | Comfort: [⭐]
+- **四维研判**：
+  - 新闻/政策：[MX Search 结论]
+  - 情绪/资金：[TGB 热门 + MX 资金流向]
+  - 流动性模式：[天量/缩量判定]
+  - 风险扫描：[check_risk.py 输出]
+- **操盘预案**：
+  - 买入价位：xxx | 目标：xxx | 止损：xxx
+  - 风险收益比：1:3
+- **免责声明**：本报告仅供参考，不构成投资建议
+```
+
+---
+
+## 执行入口 (CLI)
+
+```bash
+# 盘前分析（08:00 执行）
+python3 scripts/pre_market.py --date 2024-01-15
+
+# 盘后复盘（15:30 执行）
+python3 scripts/post_market.py --date 2024-01-15
+
+# 智能选股
+python3 scripts/stock_picker.py --filters basic,tech,catalyst
+
+# 风险扫描（强制）
+python3 scripts/check_risk.py --code 300750
+
+# 交易计划
+python3 scripts/trading_plan.py --stock 300750 --scenario both
+```
+
+---
+
+## 环境变量
+
+| 变量 | 说明 | 必需 |
+|------|------|------|
+| MX_APIKEY | MX API 密钥 | 是 |
+| EM_API_KEY | EM API 密钥 | 是 |
+| DATA_CACHE_DIR | 数据缓存目录 | 否 |
+
+---
+
+## 坑点与技巧 (Pitfalls)
+
+1. **环境变量透传**：`execute_code` 中 `os.environ` 可能无法透传给 shell 子进程
+   ```bash
+   export EM_API_KEY="xxx" && python3 scripts/check_risk.py --code 300750
+   ```
+
+2. **工具回退**：若 `taoguba-hot` 报错，立即改用 `mx-search "淘股吧热门话题汇总"`
+
+3. **日期区分**：严禁混淆"昨日涨停/异动"与"今日实时表现"
+
+4. **免责声明**：所有报告必须以免责声明结尾
+
+---
+
+## 参考资料 (References)
+
+| 类别 | 路径 | 内容 |
+|------|------|------|
+| **指南** | `references/guides/` | 架构设计、插件/模块开发指南 |
+| **工作流** | `references/workflows/` | 各分析模块详细文档 |
+| **交易** | `references/trading/` | 交易策略、仓位管理、情绪分析 |
+
+快速参考：
+- `references/guides/ARCHITECTURE.md` - 系统架构
+- `references/trading/a-share-rules.md` - A股交易规则
+- `references/trading/basic-strategies.md` - 基本交易策略
+- `references/SECURITY.md` - 风险管理
