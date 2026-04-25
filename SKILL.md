@@ -46,40 +46,22 @@ env:
 
 ## ⚠️ 首次使用必读
 
-### 依赖检查
+**首次使用前，请先完成依赖安装**：参见 [references/INSTALL.md](references/INSTALL.md)
 
-**使用前，必须检查依赖 skill 是否已安装：**
-
-```bash
-# 在终端执行
-for skill in mx-stocks-screener mx-finance-data mx-financial-assistant mx-finance-search mx-data taoguba-hot akshare-stock open-gstack-browser; do
-  if [ -d "$HOME/.claude/skills/$skill" ]; then
-    echo "✅ $skill"
-  else
-    echo "❌ $skill - 未安装"
-  fi
-done
-```
-
-**缺失依赖安装：**
-
-| Skill | 安装命令 | 用途 |
-|-------|---------|------|
-| `mx-stocks-screener` | `/install mx-stocks-screener` | 智能选股 |
-| `mx-finance-data` | `/install mx-finance-data` | 技术指标 |
-| `mx-financial-assistant` | `/install mx-financial-assistant` | 财务分析 |
-| `mx-finance-search` | `/install mx-finance-search` | 消息面 |
-| `mx-data` | `/install mx-data` | 市场数据 |
-| `taoguba-hot` | `/install taoguba-hot` | 情绪数据 |
-| `akshare-stock` | `/install akshare-stock` | AkShare 公开数据 |
-| `open-gstack-browser` | `/install open-gstack-browser` | 浏览器（东方财富数据） |
-
-### 环境准备
+简要步骤：
 
 ```bash
-# 设置环境变量（复制 .env.example 为 .env 后填入实际值）
+# 1. 安装依赖 skill
+/install mx-stocks-screener
+/install mx-finance-data
+# ... 其他依赖见 INSTALL.md
+
+# 2. 配置环境变量
 cp .env.example .env
-source .env  # 或手动 export MX_APIKEY=xxx EM_API_KEY=xxx
+# 编辑 .env 填入 API 密钥
+
+# 3. 验证安装
+python3 scripts/check_risk.py --code 300750
 ```
 
 ---
