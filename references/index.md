@@ -39,7 +39,7 @@ a-shares-master/
 │
 ├── references/
 │   ├── index.md               # 本索引页
-│   ├── INSTALL.md             # 安装指南
+│   ├── install.md            # 安装指南
 │   ├── rating.md              # 四维评级体系
 │   ├── rules.md               # 硬规则
 │   ├── scenes.md              # 场景体系
@@ -100,7 +100,7 @@ a-shares-master/
 | 任务 | 查阅文档 |
 |------|---------|
 | **了解系统** | SKILL.md |
-| **安装配置** | references/INSTALL.md |
+| **安装配置** | references/install.md |
 | **理解评级** | references/rating.md |
 | **分析股票** | references/four-dimensions.md |
 | **TGB情绪** | references/tgb-sentiment.md |
