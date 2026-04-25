@@ -32,14 +32,41 @@
 
 ## 工作流
 
-| 文件 | 内容 |
+| 目录 | 内容 |
 |------|------|
-| **[flow/pre-market.md](flow/pre-market.md)** | 盘前分析，08:00前完成 |
-| **[flow/post-market.md](flow/post-market.md)** | 盘后复盘，15:30后完成 |
-| **[flow/trading-plan.md](flow/trading-plan.md)** | 交易计划，每日盘后制定 |
-| **[flow/high-pr-picker.md](flow/high-pr-picker.md)** | 高PR选股，三重过滤器 |
-| **[flow/market-synthesis.md](flow/market-synthesis.md)** | 市场综合分析 |
-| **[flow/integrated-expert.md](flow/integrated-expert.md)** | 综合专家执行流程 |
+| **[flow/README.md](flow/README.md)** | SOP总索引，15场景导航 |
+| **[flow/pre-market.md](flow/pre-market.md)** | 盘前分析 |
+| **[flow/post-market.md](flow/post-market.md)** | 盘后复盘 |
+
+**赚钱引擎SOP（6个）**
+
+| 文件 | 场景 |
+|------|------|
+| [flow/make-money/stock-picker.md](flow/make-money/stock-picker.md) | 选股 |
+| [flow/make-money/stock-diagnosis.md](flow/make-money/stock-diagnosis.md) | 诊股 |
+| [flow/make-money/position-diagnosis.md](flow/make-money/position-diagnosis.md) | 持仓诊断 |
+| [flow/make-money/unstuck.md](flow/make-money/unstuck.md) | 解套 |
+| [flow/make-money/stop-loss.md](flow/make-money/stop-loss.md) | 止损 |
+| [flow/make-money/take-profit.md](flow/make-money/take-profit.md) | 止盈 |
+
+**学习引擎SOP（6个）**
+
+| 文件 | 场景 |
+|------|------|
+| [flow/learn/market-outlook.md](flow/learn/market-outlook.md) | 大盘前瞻 |
+| [flow/learn/market-summary.md](flow/learn/market-summary.md) | 大盘总结 |
+| [flow/learn/daily-review.md](flow/learn/daily-review.md) | 每日复盘 |
+| [flow/learn/case-analysis.md](flow/learn/case-analysis.md) | 案例拆解 |
+| [flow/learn/error-reflection.md](flow/learn/error-reflection.md) | 错误反思 |
+| [flow/learn/experience.md](flow/learn/experience.md) | 经验沉淀 |
+
+**进化引擎SOP（3个）**
+
+| 文件 | 场景 |
+|------|------|
+| [flow/evolve/case-record.md](flow/evolve/case-record.md) | 案例记录 |
+| [flow/evolve/rule-update.md](flow/evolve/rule-update.md) | 规律更新 |
+| [flow/evolve/model-tune.md](flow/evolve/model-tune.md) | 模型优化 |
 
 ---
 
@@ -76,13 +103,17 @@ a-shares-master/
 │   │   ├── templates.md      # 报告模板
 │   │   └── pitfalls.md       # 反模式避坑
 │   │
-│   └── flow/                  # 工作流
+│   └── flow/                  # 工作流SOP
+│       ├── README.md          # SOP总索引
 │       ├── pre-market.md
 │       ├── post-market.md
-│       ├── high-pr-picker.md
 │       ├── trading-plan.md
+│       ├── high-pr-picker.md
 │       ├── market-synthesis.md
-│       └── integrated-expert.md
+│       ├── integrated-expert.md
+│       ├── make-money/        # 赚钱引擎(6)
+│       ├── learn/             # 学习引擎(6)
+│       └── evolve/            # 进化引擎(3)
 │
 ├── scripts/                    # 执行脚本
 │   ├── config_manager.py      # 配置管理
@@ -111,15 +142,23 @@ a-shares-master/
 | **了解系统** | SKILL.md |
 | **安装配置** | references/install.md |
 | **理解评级** | references/core/rating/ |
-| **分析股票** | references/core/four-dimensions.md |
 | **TGB情绪** | references/core/tgb-sentiment.md |
-| **选股** | references/guides/scenes.md, flow/high-pr-picker.md |
-| **诊股** | references/guides/scenes.md, references/guides/anchors.md |
+| **选股** | flow/make-money/stock-picker.md |
+| **诊股** | flow/make-money/stock-diagnosis.md |
+| **持仓诊断** | flow/make-money/position-diagnosis.md |
+| **解套** | flow/make-money/unstuck.md |
+| **止损** | flow/make-money/stop-loss.md |
+| **止盈** | flow/make-money/take-profit.md |
+| **大盘前瞻** | flow/learn/market-outlook.md |
+| **大盘总结** | flow/learn/market-summary.md |
+| **每日复盘** | flow/learn/daily-review.md |
+| **案例拆解** | flow/learn/case-analysis.md |
+| **错误反思** | flow/learn/error-reflection.md |
+| **经验沉淀** | flow/learn/experience.md |
+| **案例记录** | flow/evolve/case-record.md |
+| **规律更新** | flow/evolve/rule-update.md |
+| **模型优化** | flow/evolve/model-tune.md |
 | **风控扫描** | references/guides/rules.md, scripts/check_risk.py |
-| **制定交易计划** | scripts/trading_plan.py, references/guides/anchors.md |
-| **盘前分析** | scripts/pre_market.py, flow/pre-market.md |
-| **盘后复盘** | scripts/post_market.py, flow/post-market.md |
-| **写报告** | references/guides/templates.md |
 | **避免错误** | references/guides/pitfalls.md |
 | **持续进化** | references/core/feedback-loop.md |
 
