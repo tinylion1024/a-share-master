@@ -22,38 +22,6 @@
 
 ---
 
-## Iwencai数据源（需安装）
-
-### Iwencai技能清单
-
-| 技能 | 数据类型 |
-|------|----------|
-| market-data-query | 行情数据 |
-| financial-data-query | 财务数据 |
-| a-share-screener | A股选股 |
-| sector-screener | 板块选股 |
-| research-report-search | 研报搜索 |
-| announcement-search | 公告搜索 |
-| news-search | 新闻搜索 |
-| macro-data-query | 宏观数据 |
-| industry-data-query | 行业数据 |
-| event-data-query | 事件数据 |
-| basic-info-query | 基本资料 |
-| index-data-query | 指数数据 |
-| convertible-bond-screener | 可转债选股 |
-| etf-screener | ETF选股 |
-| fund-screener | 基金选股 |
-| futures-options-data-query | 期货期权数据 |
-
-### Iwencai环境变量
-
-```bash
-export IWENCAI_BASE_URL=https://openapi.iwencai.com
-export IWENCAI_API_KEY=【你的API_KEY】
-```
-
----
-
 ## 操作步骤
 
 ### Step 1：确定需要的数据
@@ -68,33 +36,50 @@ export IWENCAI_API_KEY=【你的API_KEY】
 | 大盘分析 | 指数、成交额，资金流向 | Iwencai(指数) + AkShare |
 | 复盘 | 当日所有行情数据 | Iwencai(行情) + AkShare |
 
-### Step 2：按优先级获取（Fallback链）
+---
+
+### Step 2：获取三类必要数据
+
+#### 3.1 数据优先级（Fallback链）
 
 ```
 问财SKILL > MX（妙想）API > AkShare
-
-1. 行情数据：
-   - Iwencai: market-data-query（首选）
-   - MX: mx-data（备选）
-   - AkShare + 东财（最后备选）
-
-2. 财务数据：
-   - Iwencai: financial-data-query（首选）
-   - MX: mx-finance-data（备选）
-
-3. 选股筛选：
-   - Iwencai: a-share-screener（首选）
-   - Iwencai: sector-screener（板块）
-   - MX: mx-stocks-screener（备选）
-
-4. 研报新闻：
-   - Iwencai: research-report-search
-   - Iwencai: news-search
-   - MX: mx-finance-search（备选）
-
-5. 情绪数据（补充）：
-   - taoguba-hot（TGB热度）
 ```
+
+#### 3.2 三类必要数据
+
+**A. 市场技术数据**
+
+| 数据项 | 首选 | 备选1 | 备选2 |
+|--------|------|--------|--------|
+| 实时行情 | Iwencai(market-data-query) | MX(mx-data) | AkShare |
+| 股价/涨跌 | Iwencai(market-data-query) | MX(mx-data) | AkShare |
+| 成交量/额 | Iwencai(market-data-query) | MX(mx-data) | AkShare |
+| 均线/MA | Iwencai(market-data-query) | MX(mx-data) | AkShare |
+| 指数数据 | Iwencai(index-data-query) | MX(mx-data) | AkShare |
+| 板块行情 | Iwencai(sector-screener) | MX(mx-data) | AkShare |
+| 资金流向 | Iwencai(market-data-query) | MX(mx-data) | AkShare |
+
+**B. 消息新闻数据**
+
+| 数据项 | 首选 | 备选1 | 备选2 |
+|--------|------|--------|--------|
+| 实时新闻 | Iwencai(news-search) | MX(mx-finance-search) | - |
+| 公告 | Iwencai(announcement-search) | MX(mx-finance-search) | 交易所 |
+| 研报 | Iwencai(research-report-search) | MX(mx-finance-search) | - |
+| 宏观政策 | Iwencai(macro-data-query) | MX(mx-macro-data) | - |
+| 行业数据 | Iwencai(industry-data-query) | MX(mx-macro-data) | - |
+| 事件数据 | Iwencai(event-data-query) | MX(mx-finance-search) | - |
+
+**C. 情绪文本数据**
+
+| 数据项 | 来源 | 说明 |
+|--------|------|------|
+| TGB热度 | taoguba-hot | 淘股吧热门帖子情绪 |
+| V观点 | taoguba-hot | 大V观点提取 |
+| 社区情绪 | 雪球、微博 | 需交叉验证 |
+
+---
 
 ### Step 3：数据校验
 
@@ -108,8 +93,9 @@ export IWENCAI_API_KEY=【你的API_KEY】
 
 ```markdown
 【数据来源】
-行情数据：Iwencai(market-data-query) + AkShare
+行情数据：Iwencai(market-data-query)
 财务数据：Iwencai(financial-data-query)
+消息数据：Iwencai(news-search/announcement-search)
 情绪数据：淘股吧热度
 更新时间：YYYY-MM-DD HH:MM:SS
 数据时效：<5分钟/当日有效/历史数据
@@ -136,7 +122,7 @@ export IWENCAI_API_KEY=【你的API_KEY】
 | 用单一来源 | 数据可能有误 | 多源交叉验证 |
 | 用过时数据 | 判断失误 | 检查时间戳 |
 | 用小众来源 | 虚假信息 | 优先官方/Iwencai |
-| 未配置Iwencai | 无法使用选股等高级功能 | 配置API_KEY |
+| 缺情绪数据 | 维度不全 | 补充TGB热度 |
 
 ---
 
