@@ -1,53 +1,27 @@
 ---
-name: a-share-profit-helper
+name: a-shares-master
 description: |
-  A股散户盈利助手，专注帮助散户赚钱、复利增长。
+  A股综合分析系统：集成"新闻/政策、社交情绪、市场流动性、显性风险"四维分析。
+
+  核心能力：
+  - 四维评级选股（机会/安全/确定/舒适）
+  - 15场景SOP（选股/诊股/复盘等）
+  - 盘前报告/盘后复盘/交易计划
+  - 高PR股票筛选
+  - 风险合规检查
 
   触发：选股、诊股、买股、卖股、复盘、大盘分析、仓位管理、止损止盈
-  不适用：美股、港股、期货、期权、量化策略
 
-depends_on:
-  # AkShare数据（行情）
-  - akshare-stock
-
-  # Iwencai数据（选股/财务/研报/新闻）
-  - market-data-query          # 行情数据
-  - financial-data-query      # 财务数据
-  - a-share-screener         # A股选股
-  - sector-screener          # 板块选股
-  - research-report-search    # 研报搜索
-  - announcement-search       # 公告搜索
-  - news-search               # 新闻搜索
-  - macro-data-query         # 宏观数据
-  - industry-data-query       # 行业数据
-  - event-data-query         # 事件数据
-  - basic-info-query         # 基本资料
-  - index-data-query         # 指数数据
-  - convertible-bond-screener # 可转债选股
-  - etf-screener             # ETF选股
-  - fund-screener            # 基金选股
-  - futures-options-data-query # 期货期权数据
-
-  # 现有依赖
-  - mx-finance-data         # 财务数据
-  - mx-macro-data          # 宏观数据
-  - mx-stocks-screener     # 选股筛选
-  - mx-finance-search       # 市场搜索
-  - mx-financial-assistant  # 问答助手
-  - stock-diagnosis        # 股票诊断
-  - stock-earnings-review   # 业绩点评
-  - industry-stock-tracker  # 行业追踪
-  - taoguba-hot           # 社区情绪
-  - open-gstack-browser   # 浏览器工具
+depends_on: depends_on.yml
 
 env:
   - MX_APIKEY
   - EM_API_KEY
-  - IWENCAI_BASE_URL=https://openapi.iwencai.com
-  - IWENCAI_API_KEY=【你的API_KEY】
+  - IWENCAI_BASE_URL
+  - IWENCAI_API_KEY
 ---
 
-# A股散户盈利助手
+# A股全能策略专家 (A-Shares Master)
 
 > 帮散户赚钱，以「复利增长」为北极星目标
 
@@ -59,6 +33,21 @@ env:
 三维看市场：消息 ── 情绪 ── 技术
 四维选股级：机会 ── 安全 ── 确定 ── 舒适
 ```
+
+---
+
+## 能力模块
+
+| 模块 | 说明 |
+|------|------|
+| `src/modules/pre_market.py` | 盘前报告生成 |
+| `src/modules/post_market.py` | 盘后复盘分析 |
+| `src/modules/stock_picker.py` | 高PR选股系统 |
+| `src/modules/trading_plan.py` | 双剧本交易计划 |
+| `src/core/analyzer.py` | 综合分析引擎 |
+| `src/core/rating.py` | 四维评级系统 |
+| `src/core/risk_checker.py` | 风险合规检查 |
+| `src/core/pipeline.py` | 工作流编排 |
 
 ---
 
@@ -97,30 +86,28 @@ env:
 
 ## Step 0：需求澄清 + 场景识别
 
-首先识别用户需要的场景，然后收集必要信息：
-
 ### 场景识别
 
 | 用户需求 | 场景 | SOP |
 |----------|------|-----|
 | **赚钱引擎** | | |
-| 不知道买什么 | 选股 | [flow/make-money/stock-picker.md](references/flow/make-money/stock-picker.md) |
-| 纠结买不买 | 诊股 | [flow/make-money/stock-diagnosis.md](references/flow/make-money/stock-diagnosis.md) |
-| 纠结卖不卖 | 持仓诊断 | [flow/make-money/position-diagnosis.md](references/flow/make-money/position-diagnosis.md) |
-| 被套了 | 解套 | [flow/make-money/unstuck.md](references/flow/make-money/unstuck.md) |
-| 亏多少必须走 | 止损 | [flow/make-money/stop-loss.md](references/flow/make-money/stop-loss.md) |
-| 赚多少要跑 | 止盈 | [flow/make-money/take-profit.md](references/flow/make-money/take-profit.md) |
+| 不知道买什么 | 选股 | [references/flow/make-money/stock-picker.md](references/flow/make-money/stock-picker.md) |
+| 纠结买不买 | 诊股 | [references/flow/make-money/stock-diagnosis.md](references/flow/make-money/stock-diagnosis.md) |
+| 纠结卖不卖 | 持仓诊断 | [references/flow/make-money/position-diagnosis.md](references/flow/make-money/position-diagnosis.md) |
+| 被套了 | 解套 | [references/flow/make-money/unstuck.md](references/flow/make-money/unstuck.md) |
+| 亏多少必须走 | 止损 | [references/flow/make-money/stop-loss.md](references/flow/make-money/stop-loss.md) |
+| 赚多少要跑 | 止盈 | [references/flow/make-money/take-profit.md](references/flow/make-money/take-profit.md) |
 | **学习引擎** | | |
-| 今天怎么看 | 大盘前瞻 | [flow/learn/market-outlook.md](references/flow/learn/market-outlook.md) |
-| 为什么涨/跌 | 大盘总结 | [flow/learn/market-summary.md](references/flow/learn/market-summary.md) |
-| 操作对吗 | 每日复盘 | [flow/learn/daily-review.md](references/flow/learn/daily-review.md) |
-| 为什么涨/跌 | 案例拆解 | [flow/learn/case-analysis.md](references/flow/learn/case-analysis.md) |
-| 为什么亏 | 错误反思 | [flow/learn/error-reflection.md](references/flow/learn/error-reflection.md) |
-| 怎么赚到的 | 经验沉淀 | [flow/learn/experience.md](references/flow/learn/experience.md) |
+| 今天怎么看 | 大盘前瞻 | [references/flow/learn/market-outlook.md](references/flow/learn/market-outlook.md) |
+| 为什么涨/跌 | 大盘总结 | [references/flow/learn/market-summary.md](references/flow/learn/market-summary.md) |
+| 操作对吗 | 每日复盘 | [references/flow/learn/daily-review.md](references/flow/learn/daily-review.md) |
+| 为什么涨/跌 | 案例拆解 | [references/flow/learn/case-analysis.md](references/flow/learn/case-analysis.md) |
+| 为什么亏 | 错误反思 | [references/flow/learn/error-reflection.md](references/flow/learn/error-reflection.md) |
+| 怎么赚到的 | 经验沉淀 | [references/flow/learn/experience.md](references/flow/learn/experience.md) |
 | **进化引擎** | | |
-| 记录这笔 | 案例记录 | [flow/evolve/case-record.md](references/flow/evolve/case-record.md) |
-| 更新规则 | 规律更新 | [flow/evolve/rule-update.md](references/flow/evolve/rule-update.md) |
-| 调整参数 | 模型优化 | [flow/evolve/model-tune.md](references/flow/evolve/model-tune.md) |
+| 记录这笔 | 案例记录 | [references/flow/evolve/case-record.md](references/flow/evolve/case-record.md) |
+| 更新规则 | 规律更新 | [references/flow/evolve/rule-update.md](references/flow/evolve/rule-update.md) |
+| 调整参数 | 模型优化 | [references/flow/evolve/model-tune.md](references/flow/evolve/model-tune.md) |
 
 ### 必要信息确认
 
@@ -261,8 +248,31 @@ env:
 ## ⚡ 快速命令
 
 ```bash
-python3 scripts/config_manager.py   # 配置向导
-python3 scripts/check_risk.py --code 300750  # 风控扫描
-python3 scripts/stock_picker.py --filters basic,tech  # 选股
-python3 scripts/trading_plan.py --stock 300750  # 交易计划
+# 风控扫描
+python3 scripts/check_risk.py --code 300750
+
+# 选股筛选
+python3 scripts/stock_picker.py --filters basic,tech
+
+# 交易计划
+python3 scripts/trading_plan.py --stock 300750
+
+# 市场分析
+python3 scripts/market_analysis.py
 ```
+
+---
+
+## 吸收的子能力
+
+以下能力已从独立skill合并到本skill：
+
+| 原Skill | 能力 | 整合位置 |
+|---------|------|---------|
+| `a-share-integrated-expert` | 四维分析+舒适度判定 | `src/core/rating.py` |
+| `a-share-v2-analyzer` | 天量行情分析 | `src/core/analyzer.py` |
+| `a-share-daily-pre-opening-report` | 盘前报告 | `src/modules/pre_market.py` |
+| `a-share-market-synthesis` | 开盘哨站+复盘 | `src/modules/post_market.py` |
+| `a-share-detailed-reviewer` | 每日复盘 | `src/modules/post_market.py` |
+| `high-pr-stock-picker` | 高PR选股 | `src/modules/stock_picker.py` |
+| `trading-plan-generator` | 双剧本交易计划 | `src/modules/trading_plan.py` |
