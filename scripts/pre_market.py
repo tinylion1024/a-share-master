@@ -1,53 +1,29 @@
 #!/usr/bin/env python3
-"""
-Pre-Market Script - 盘前分析脚本
+"""Pre-market analysis script."""
 
-Usage:
-    python3 references/scripts/pre_market.py --date 2024-01-15
-"""
+from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.cli import render_json, render_pre_market
+from src.skill import ASharesSkill
 
 
-def generate_pre_market_report(date: str) -> str:
-    """生成盘前报告"""
-    lines = [
-        f"# 📊 开盘前哨站 {date}",
-        "",
-        "## 🌙 隔夜风向",
-        "- 标普500: --",
-        "- A50期货: --",
-        "",
-        "## 📜 政策利好",
-        "_暂无数据_",
-        "",
-        "## 📌 昨日遗留",
-        "- 连板梯队: --",
-        "- 核心龙头竞价预期: --",
-        "",
-        "## 📋 今日剧本",
-        "### 乐观剧本",
-        "- 触发条件: 待确认",
-        "- 目标板块: 待确认",
-        "",
-        "### 悲观剧本",
-        "- 风险信号: 待确认",
-        "- 防御动作: 待确认",
-        "",
-        "---",
-        "*本报告仅供参考，不构成投资建议*",
-    ]
-    return "\n".join(lines)
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="盘前分析脚本")
-    parser.add_argument("--date", type=str, help="日期 (YYYY-MM-DD)")
+    parser.add_argument("--date", type=str, default=datetime.now().strftime("%Y-%m-%d"), help="日期 (YYYY-MM-DD)")
+    parser.add_argument("--format", choices=["markdown", "json"], default="markdown", help="输出格式")
     args = parser.parse_args()
 
-    date = args.date or datetime.now().strftime("%Y-%m-%d")
-    print(generate_pre_market_report(date))
+    payload = ASharesSkill().pre_market_report(args.date)
+    print(render_json(payload) if args.format == "json" else render_pre_market(payload))
 
 
 if __name__ == "__main__":

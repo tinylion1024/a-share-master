@@ -1,110 +1,108 @@
-"""
-双剧本交易计划生成器
-整合自: trading-plan-generator, a-share-integrated-expert
-"""
+"""Trading plan generation."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 from typing import Optional
 
+from src.config import Config
+from src.core.analyzer import IntegratedAnalyzer
+from src.core.rating import RatingSystem
+from src.core.risk_checker import RiskChecker
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class TradingPlan:
-    """交易计划数据结构"""
+    """Structured optimistic/pessimistic trading plan."""
+
     stock_code: str
     stock_name: str
     date: str
-
-    # 乐观剧本
-    optimistic_triggers: list      # 触发条件
-    optimistic_entry: float       # 买入价
-    optimistic_target: float      # 目标价
-    optimistic_stop_loss: float   # 止损价
-    optimistic_position: float    # 仓位建议
-
-    # 悲观剧本
-    pessimistic_triggers: list
+    optimistic_triggers: list[str]
+    optimistic_entry: float
+    optimistic_target: float
+    optimistic_stop_loss: float
+    optimistic_position: float
+    pessimistic_triggers: list[str]
     pessimistic_entry: float
     pessimistic_target: float
     pessimistic_stop_loss: float
     pessimistic_position: float
+    risk_control: dict
+    break_points: dict
 
-    # 风险控制
-    risk_control: dict             # 风控要点
-    break_points: dict             # 关键突破/跌破点
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class TradingPlanGenerator:
-    """
-    双剧本交易计划生成器
+    """Generate executable trading plans with two scenarios."""
 
-    工作流程：
-    1. 数据采集：使用 mx-finance-search 或 mx-data 获取昨日指标
-    2. 情绪分析：使用 taoguba-hot 获取V观点
-    3. 场景映射：
-       - 乐观：定义触发条件（撬板、量能阈值）和目标板块
-       - 悲观：定义风险信号（跌停扩大）和防御动作
-    4. 可执行锚点：明确价格位、量能目标、止损条件
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
+        self.analyzer = IntegratedAnalyzer(self.config, self.provider)
+        self.rating_system = RatingSystem(self.config, self.provider)
+        self.risk_checker = RiskChecker(self.config, self.provider)
 
     def generate_plan(self, stock_code: str, date: str) -> TradingPlan:
-        """
-        生成双剧本交易计划
-
-        Args:
-            stock_code: 股票代码
-            date: 日期 (YYYY-MM-DD)
-
-        Returns:
-            TradingPlan: 交易计划
-        """
-        # TODO: 接入 mx-finance-search, taoguba-hot
-        raise NotImplementedError("等待 API 集成")
+        stock = self.provider.get_stock_snapshot(stock_code)
+        market = self.provider.get_market_snapshot(date)
+        market_mode = self.analyzer.detect_market_mode(market.total_volume_billion)
+        rating = self.rating_system.rate_stock(stock_code, date)
+        risk = self.risk_checker.check(stock_code, date)
+        optimistic_triggers, pessimistic_triggers = self.define_triggers(market_mode.mode)
+        optimistic_entry = round(min(stock.price, stock.resistance * 0.99), 2)
+        optimistic_stop = round(stock.support, 2)
+        optimistic_target = round(
+            max(stock.resistance, optimistic_entry + (optimistic_entry - optimistic_stop) * self.config.profit_target_multiplier),
+            2,
+        )
+        pessimistic_stop = round(min(stock.support, stock.price * (1 - self.config.stop_loss_ratio)), 2)
+        return TradingPlan(
+            stock_code=stock.code,
+            stock_name=stock.name,
+            date=market.date,
+            optimistic_triggers=optimistic_triggers,
+            optimistic_entry=optimistic_entry,
+            optimistic_target=optimistic_target,
+            optimistic_stop_loss=optimistic_stop,
+            optimistic_position=self.calculate_position(risk.risk_level, "高" if rating.total_score >= 4 else "中"),
+            pessimistic_triggers=pessimistic_triggers,
+            pessimistic_entry=round(stock.support, 2),
+            pessimistic_target=round(stock.ma20, 2),
+            pessimistic_stop_loss=pessimistic_stop,
+            pessimistic_position=0.0 if risk.risk_level == "R3" else round(self.config.max_single_position * 0.3, 2),
+            risk_control={
+                "risk_level": risk.risk_level,
+                "red_flags": risk.red_flags,
+                "warnings": risk.warnings,
+            },
+            break_points={"support": stock.support, "resistance": stock.resistance},
+        )
 
     def fetch_market_metrics(self, date: str) -> dict:
-        """获取市场指标（成交量、资金流向、涨跌家数）"""
-        # TODO: 接入 mx-finance-search, mx-data
-        pass
+        market = self.provider.get_market_snapshot(date)
+        return {"成交额(亿)": market.total_volume_billion, "涨家": market.advancers, "跌家": market.decliners}
 
     def fetch_sentiment_after_close(self, date: str) -> dict:
-        """获取收盘后情绪（V观点、淘股吧热门）"""
-        # TODO: 接入 taoguba-hot
-        pass
+        market = self.provider.get_market_snapshot(date)
+        return {"leaders": list(market.leaders), "sentiment_score": market.sentiment_score}
 
-    def define_triggers(self, market_mode: str) -> tuple:
-        """
-        定义双剧本触发条件
-
-        Returns:
-            (optimistic_triggers, pessimistic_triggers)
-        """
-        # TODO: AI 分析
-        pass
+    def define_triggers(self, market_mode: str) -> tuple[list[str], list[str]]:
+        optimistic = [f"{market_mode} 延续", "股价站稳关键支撑", "热点板块继续扩散"]
+        pessimistic = ["竞价不及预期", "跌破关键支撑", "板块龙头出现放量分歧"]
+        return optimistic, pessimistic
 
     def calculate_position(self, risk_level: str, confidence: str) -> float:
-        """
-        计算仓位建议
-
-        Args:
-            risk_level: 风险等级 (R1/R2/R3)
-            confidence: 置信度 (高/中/低)
-
-        Returns:
-            float: 仓位比例 (0-1)
-        """
-        base_position = 0.3
-        if risk_level == "R1":
-            base_position *= 1.0
-        elif risk_level == "R2":
+        base_position = self.config.max_single_position
+        if risk_level == "R2":
             base_position *= 0.7
-        else:
-            base_position *= 0.3
-
+        elif risk_level == "R3":
+            base_position = 0.0
         if confidence == "高":
-            base_position *= 1.2
+            base_position *= 1.0
         elif confidence == "低":
-            base_position *= 0.7
-
-        return min(base_position, 0.5)  # 不超过50%
+            base_position *= 0.5
+        return round(min(base_position, self.config.max_position_ratio), 2)

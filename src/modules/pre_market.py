@@ -1,77 +1,66 @@
-"""
-盘前报告生成器
-整合自: a-share-daily-pre-opening-report, a-share-market-synthesis
-"""
+"""Pre-market report generation."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 from typing import Optional
 
+from src.config import Config
+from src.core.analyzer import IntegratedAnalyzer
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class PreMarketReport:
-    """盘前报告数据结构"""
+    """Structured pre-market report."""
+
     date: str
-    overnight_sentiment: str      # 隔夜情绪
-    policy_highlights: list        # 政策重点
-    yesterday_leverage: str        # 昨日遗留（连板梯队）
-    today_script_optimistic: str   # 乐观剧本
-    today_script_pessimistic: str  # 悲观剧本
-    confidence: str                # 置信度
+    overnight_sentiment: str
+    policy_highlights: list[str]
+    yesterday_leverage: str
+    today_script_optimistic: str
+    today_script_pessimistic: str
+    confidence: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class PreMarketAnalyzer:
-    """
-    盘前报告生成器
+    """Generate an actionable pre-market report."""
 
-    工作流程：
-    1. 数据采集 (08:00)
-       - 前日市场数据（净流入、涨跌停家数、领涨板块）
-       - 淘股吧情绪（收盘至次日早间）
-       - 隔夜新闻（美股、A50、政策更新）
-    2. 分析
-       - 高动量股票识别
-       - 信息缺口检测（政策术语、供应链中断）
-    3. 输出
-       - 硬数据摘要、软情绪洞察、隔夜新闻、双剧本交易计划
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
+        self.integrated_analyzer = IntegratedAnalyzer(self.config, self.provider)
 
     def generate_report(self, date: str) -> PreMarketReport:
-        """
-        生成盘前报告
-
-        Args:
-            date: 报告日期 (YYYY-MM-DD)
-
-        Returns:
-            PreMarketReport: 盘前报告
-        """
-        # TODO: 接入 mx-data, taoguba-hot, mx-search
-        raise NotImplementedError("等待 API 集成")
+        market = self.provider.get_market_snapshot(date)
+        market_mode = self.integrated_analyzer.detect_market_mode(market.total_volume_billion)
+        optimistic, pessimistic = self.generate_dual_script({"market_mode": market_mode.mode, "hot_sectors": market.hot_sectors})
+        return PreMarketReport(
+            date=market.date,
+            overnight_sentiment=f"{market.overseas_signal}，情绪分 {market.sentiment_score}",
+            policy_highlights=list(market.policy_highlights),
+            yesterday_leverage="、".join(market.leaders),
+            today_script_optimistic=optimistic,
+            today_script_pessimistic=pessimistic,
+            confidence="中高" if market.sentiment_score >= 3.3 else "中",
+        )
 
     def fetch_overnight_data(self) -> dict:
-        """获取隔夜数据（美股、A50、中概股）"""
-        # TODO: 接入 mx-data
-        pass
+        market = self.provider.get_market_snapshot()
+        return {"overseas_signal": market.overseas_signal, "policy_highlights": list(market.policy_highlights)}
 
     def fetch_sentiment(self) -> dict:
-        """获取淘股吧情绪数据"""
-        # TODO: 接入 taoguba-hot
-        pass
+        market = self.provider.get_market_snapshot()
+        return {"score": market.sentiment_score, "leaders": list(market.leaders)}
 
     def analyze_yesterday_leverage(self) -> dict:
-        """分析昨日遗留（连板梯队、龙头预期）"""
-        # TODO: 接入 mx-finance-data
-        pass
+        market = self.provider.get_market_snapshot()
+        return {"leaders": list(market.leaders), "hot_sectors": list(market.hot_sectors)}
 
-    def generate_dual_script(self, market_data: dict) -> tuple:
-        """
-        生成双剧本（乐观/悲观）
-
-        Returns:
-            (optimistic_script, pessimistic_script)
-        """
-        # TODO: 接入 AI 分析
-        pass
+    def generate_dual_script(self, market_data: dict) -> tuple[str, str]:
+        optimistic = f"若 {market_data['market_mode']} 延续，优先做 {', '.join(market_data['hot_sectors'][:2])} 的强趋势中军。"
+        pessimistic = "若竞价转弱或高位股分歧扩大，降低仓位并等待回踩确认。"
+        return optimistic, pessimistic

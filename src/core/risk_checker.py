@@ -1,107 +1,93 @@
-"""
-风险检查器
-整合自: a-share-integrated-expert
-"""
+"""Risk controls for the A-share skill."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from datetime import date as date_cls
 from typing import Optional
 
+from src.config import Config
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class RiskCheckResult:
-    """风险检查结果"""
+    """Risk evaluation result."""
+
     stock_code: str
-    is_clear: bool                    # 是否清白（无风险）
-    risk_level: str                   # R1/R2/R3
-    red_flags: list                   # 红线项目列表
-    warnings: list                    # 警告项目列表
-    earnings_window_risk: bool        # 业绩窗口期风险
-    details: dict                     # 详细信息
+    is_clear: bool
+    risk_level: str
+    red_flags: list[str]
+    warnings: list[str]
+    earnings_window_risk: bool
+    details: dict
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class RiskChecker:
-    """
-    风险合规检查器
+    """Apply mandatory trading guardrails."""
 
-    强制检查项目：
-    - 立案调查
-    - 退市预警（*ST）
-    - 大比例减持
-    - 业绩巨亏
-
-    硬约束：
-    - 4月20日-30日为"死亡窗口"，未披露财报的高位个股风险评级默认R3
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
-        self.earnings_death_window = (4, 20, 4, 30)  # 死亡窗口
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
+        self.earnings_death_window = (4, 20, 4, 30)
 
     def check(self, stock_code: str, date: Optional[str] = None) -> RiskCheckResult:
-        """
-        执行风险检查
+        stock = self.provider.get_stock_snapshot(stock_code)
+        red_flags: list[str] = []
+        warnings: list[str] = []
 
-        Args:
-            stock_code: 股票代码
-            date: 检查日期（用于判断是否在业绩窗口期）
+        if self.check_investigation(stock_code):
+            red_flags.append("立案调查")
+        if self.check_delisting_risk(stock_code):
+            red_flags.append("退市预警")
+        if self.check_earnings_shock(stock_code):
+            red_flags.append("业绩巨亏")
+        if self.check_reduction(stock_code):
+            warnings.append("减持计划")
+        if stock.turnover_million < self.config.min_daily_turnover_million:
+            warnings.append("流动性不足")
 
-        Returns:
-            RiskCheckResult: 风险检查结果
-        """
-        # TODO: 接入 mx-finance-search
-        raise NotImplementedError("等待 API 集成")
+        effective_date = date or date_cls.today().isoformat()
+        earnings_window_risk = self.is_in_earnings_death_window(effective_date) and not stock.earnings_disclosed
+        if earnings_window_risk:
+            red_flags.append("业绩窗口未披露")
+
+        if red_flags:
+            risk_level = "R3"
+        elif warnings:
+            risk_level = "R2"
+        else:
+            risk_level = "R1"
+
+        details = stock.to_dict()
+        details["checked_date"] = effective_date
+        return RiskCheckResult(
+            stock_code=stock_code,
+            is_clear=not red_flags,
+            risk_level=risk_level,
+            red_flags=red_flags,
+            warnings=warnings,
+            earnings_window_risk=earnings_window_risk,
+            details=details,
+        )
 
     def check_investigation(self, stock_code: str) -> bool:
-        """
-        检查是否被立案调查
-
-        Returns:
-            bool: True if 有立案调查
-        """
-        # TODO: 接入 mx-finance-search
-        pass
+        return self.provider.get_stock_snapshot(stock_code).under_investigation
 
     def check_delisting_risk(self, stock_code: str) -> bool:
-        """
-        检查退市风险（*ST）
-
-        Returns:
-            bool: True if 有退市风险
-        """
-        # TODO: 接入 mx-finance-search
-        pass
+        stock = self.provider.get_stock_snapshot(stock_code)
+        return stock.delisting_risk or stock.name.upper().startswith("*ST")
 
     def check_reduction(self, stock_code: str) -> bool:
-        """
-        检查大比例减持
-
-        Returns:
-            bool: True if 有大比例减持
-        """
-        # TODO: 接入 mx-finance-search
-        pass
+        return self.provider.get_stock_snapshot(stock_code).reduction_plan
 
     def check_earnings_shock(self, stock_code: str) -> bool:
-        """
-        检查业绩巨亏
-
-        Returns:
-            bool: True if 业绩巨亏
-        """
-        # TODO: 接入 mx-finance-data
-        pass
+        return self.provider.get_stock_snapshot(stock_code).earnings_shock
 
     def is_in_earnings_death_window(self, date: str) -> bool:
-        """
-        判断是否在业绩死亡窗口期
-
-        Args:
-            date: 日期 (YYYY-MM-DD)
-
-        Returns:
-            bool: True if 在死亡窗口期
-        """
         month, day = int(date[5:7]), int(date[8:10])
         start_month, start_day, end_month, end_day = self.earnings_death_window
-        return (month == start_month and day >= start_day) or \
-               (month == end_month and day <= end_day)
+        return (month == start_month and day >= start_day) or (month == end_month and day <= end_day)

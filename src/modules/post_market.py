@@ -1,66 +1,69 @@
-"""
-盘后复盘分析器
-整合自: a-share-detailed-reviewer, a-share-market-synthesis
-"""
+"""Post-market review generation."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 from typing import Optional
 
+from src.config import Config
+from src.core.analyzer import IntegratedAnalyzer
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class PostMarketReview:
-    """盘后复盘数据结构"""
+    """Structured post-market review."""
+
     date: str
-    index_summary: dict           # 指数概况（点位、成交量、涨跌家数比）
-    sentiment_monitor: str        # 情绪监控
-    key_stocks: list             # 关键股票（龙妖）
-    sector_rotation: str         # 板块轮动
-    tomorrow_focus: list          # 次日关注
+    index_summary: dict
+    sentiment_monitor: str
+    key_stocks: list[str]
+    sector_rotation: str
+    tomorrow_focus: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class PostMarketAnalyzer:
-    """
-    盘后复盘分析器
+    """Generate a concise post-market review."""
 
-    组成：
-    1. 硬指标：指数表现、成交量、主力资金流向、板块净流入
-    2. 软情绪：TGB热门关键词、V共识、赚钱效应/亏钱效应
-    3. 领先指标：龙头股分析及其周期影响（启动/爆发/混沌/退潮）
-    4. 板块轮动：识别聪明钱移动方向
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
+        self.integrated_analyzer = IntegratedAnalyzer(self.config, self.provider)
 
     def generate_review(self, date: str) -> PostMarketReview:
-        """
-        生成盘后复盘
-
-        Args:
-            date: 复盘日期 (YYYY-MM-DD)
-
-        Returns:
-            PostMarketReview: 盘后复盘
-        """
-        # TODO: 接入 mx-finance-search, mx-data, taoguba-hot
-        raise NotImplementedError("等待 API 集成")
+        market = self.provider.get_market_snapshot(date)
+        liquidity = self.integrated_analyzer.analyze_liquidity_pattern(date)
+        return PostMarketReview(
+            date=market.date,
+            index_summary={
+                "成交额(亿)": market.total_volume_billion,
+                "涨跌比": f"{market.advancers}:{market.decliners}",
+                "流动性模式": liquidity["market_mode"]["mode"],
+            },
+            sentiment_monitor=f"情绪分 {market.sentiment_score}，海外信号 {market.overseas_signal}",
+            key_stocks=list(market.leaders),
+            sector_rotation=self.analyze_sector_rotation()["summary"],
+            tomorrow_focus=[f"留意 {sector}" for sector in market.hot_sectors[:3]],
+        )
 
     def fetch_hard_metrics(self) -> dict:
-        """获取硬指标（主力流向、盘面数据、热点板块）"""
-        # TODO: 接入 mx-finance-search, mx-data
-        pass
+        market = self.provider.get_market_snapshot()
+        return {"成交额(亿)": market.total_volume_billion, "涨家": market.advancers, "跌家": market.decliners}
 
     def fetch_soft_sentiment(self) -> dict:
-        """获取软情绪（TGB热门文章、V观点）"""
-        # TODO: 接入 taoguba-hot
-        pass
+        market = self.provider.get_market_snapshot()
+        return {"sentiment_score": market.sentiment_score, "leaders": list(market.leaders)}
 
     def analyze_sector_rotation(self) -> dict:
-        """分析板块轮动（资金从哪流向哪）"""
-        # TODO: 接入 mx-finance-data
-        pass
+        market = self.provider.get_market_snapshot()
+        summary = f"资金更偏向 {', '.join(market.hot_sectors[:2])}，回避 {', '.join(market.cold_sectors[:2])}。"
+        return {"summary": summary, "hot_sectors": list(market.hot_sectors), "cold_sectors": list(market.cold_sectors)}
 
     def detect_divergence(self, market_data: dict) -> dict:
-        """检测背离（指数虚假翻红、量价背离）"""
-        # TODO: AI 分析
-        pass
+        breadth = market_data.get("advancers", 0) - market_data.get("decliners", 0)
+        if breadth < 0:
+            return {"has_divergence": True, "summary": "指数可能偏强但个股体验一般。"}
+        return {"has_divergence": False, "summary": "指数和个股表现大体同步。"}

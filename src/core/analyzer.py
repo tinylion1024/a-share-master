@@ -1,143 +1,132 @@
-"""
-综合分析引擎
-整合自: a-share-integrated-expert, a-share-v2-analyzer
-"""
+"""Integrated market analysis."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 from typing import Optional
 
+from src.config import Config
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class MarketMode:
-    """市场模式"""
-    mode: str                    # 超级天量/天量/缩量/正常
-    total_volume: float          # 总成交量（亿元）
-    description: str             # 模式描述
-    key_focus: str               # 重点关注
+    """Market liquidity mode."""
+
+    mode: str
+    total_volume: float
+    description: str
+    key_focus: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class IntegratedAnalyzer:
-    """
-    综合分析引擎
+    """Combines market, sentiment, liquidity, and mandatory risk signals."""
 
-    四维分析法：
-    A. 新闻与政策面：宏观、行业政策、公司动态
-    B. 情绪面：散户情绪、游资动向、短线连板梯队
-    C. 市场模式与流动性：成交量、筹码交换、主力/散户分歧
-    D. 显性风险与合规检查：立案、退市、减持、业绩巨亏
-
-    推荐工作流：
-    1. 定调：检索今日两市成交总额，判断流动性模式
-    2. 扫描：检索重磅政策和热门公司公告
-    3. 嗅觉：调取淘股吧点赞榜，看龙妖人气
-    4. 诊断：主力 vs 散户资金流向对比
-    5. 策略：生成双剧本操盘计划
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
 
     def detect_market_mode(self, total_volume: float) -> MarketMode:
-        """
-        判断市场模式
+        if total_volume >= 20000:
+            return MarketMode("超级天量", total_volume, "2万亿以上，追高风险迅速放大", "只做有承接的中军龙头")
+        if total_volume >= 15000:
+            return MarketMode("天量", total_volume, "1.5万亿以上，分歧和换手都很高", "重视筹码结构和次日承接")
+        if total_volume <= 8000:
+            return MarketMode("缩量", total_volume, "8000亿以下，题材扩散能力偏弱", "聚焦抱团核心和低位防守")
+        return MarketMode("正常", total_volume, "流动性正常，可执行标准交易流程", "精选强于指数的个股")
 
-        Args:
-            total_volume: 总成交量（亿元）
+    def analyze_news_policy(self, keywords: list[str] | None = None, date: str | None = None) -> dict:
+        snapshot = self.provider.get_market_snapshot(date)
+        highlights = [item for item in snapshot.policy_highlights if not keywords or any(key in item for key in keywords)]
+        score = round(snapshot.policy_score, 2)
+        bias = "偏多" if score >= 3.5 else "中性" if score >= 2.5 else "偏空"
+        return {
+            "score": score,
+            "bias": bias,
+            "highlights": highlights or list(snapshot.policy_highlights),
+        }
 
-        Returns:
-            MarketMode: 市场模式
-        """
-        if total_volume > 20000:
-            return MarketMode(
-                mode="超级天量",
-                total_volume=total_volume,
-                description="2万亿+成交，技术指标钝化，需看均线支撑",
-                key_focus="大市值中军资金承接，警惕题材小票天地板"
-            )
-        elif total_volume > 15000:
-            return MarketMode(
-                mode="天量",
-                total_volume=total_volume,
-                description="1.5-2万亿成交，重点分析筹码换手率",
-                key_focus="机构/散户分歧分析"
-            )
-        elif total_volume < 8000:
-            return MarketMode(
-                mode="缩量",
-                total_volume=total_volume,
-                description="低于8000亿，重点分析抱团核心",
-                key_focus="低位稳健股"
-            )
-        return MarketMode(
-            mode="正常",
-            total_volume=total_volume,
-            description="正常成交量",
-            key_focus="标准分析流程"
-        )
+    def analyze_sentiment(self, date: str | None = None) -> dict:
+        snapshot = self.provider.get_market_snapshot(date)
+        score = round(snapshot.sentiment_score, 2)
+        if score >= 4:
+            tone = "情绪升温"
+        elif score >= 3:
+            tone = "情绪中性偏暖"
+        else:
+            tone = "情绪谨慎"
+        return {
+            "score": score,
+            "tone": tone,
+            "leaders": list(snapshot.leaders),
+            "overseas_signal": snapshot.overseas_signal,
+        }
 
-    def analyze_news_policy(self, keywords: list[str]) -> dict:
-        """
-        分析新闻与政策面
-
-        Args:
-            keywords: 重点关键词列表
-
-        Returns:
-            dict: 新闻政策分析结果
-        """
-        # TODO: 接入 mx-finance-search, mx-search
-        pass
-
-    def analyze_sentiment(self) -> dict:
-        """
-        分析情绪面
-
-        Returns:
-            dict: 情绪分析结果（散户恐慌度、游资抱团点、连板梯队）
-        """
-        # TODO: 接入 taoguba-hot
-        pass
-
-    def analyze_liquidity_pattern(self, capital_flow: dict) -> dict:
-        """
-        分析流动性模式
-
-        Args:
-            capital_flow: 资金流向数据
-
-        Returns:
-            dict: 流动性模式分析
-        """
-        # TODO: 接入 mx-finance-data
-        pass
+    def analyze_liquidity_pattern(self, date: str | None = None) -> dict:
+        snapshot = self.provider.get_market_snapshot(date)
+        mode = self.detect_market_mode(snapshot.total_volume_billion)
+        breadth = round(snapshot.advancers / max(snapshot.decliners, 1), 2)
+        return {
+            "market_mode": mode.to_dict(),
+            "breadth": breadth,
+            "advancers": snapshot.advancers,
+            "decliners": snapshot.decliners,
+            "hot_sectors": list(snapshot.hot_sectors),
+            "cold_sectors": list(snapshot.cold_sectors),
+        }
 
     def check_mandatory_risks(self, stock_code: str) -> dict:
-        """
-        强制风险检查
+        stock = self.provider.get_stock_snapshot(stock_code)
+        risks = []
+        if stock.under_investigation:
+            risks.append("立案调查")
+        if stock.delisting_risk:
+            risks.append("退市预警")
+        if stock.reduction_plan:
+            risks.append("大比例减持")
+        if stock.earnings_shock:
+            risks.append("业绩巨亏")
+        return {
+            "stock_code": stock_code,
+            "risks": risks,
+            "has_red_flags": bool(risks),
+        }
 
-        检查：立案调查、退市预警(*ST)、大比例减持、业绩巨亏
+    def analyze_tianliang_adaptation(self, stock_code: str, date: str | None = None) -> dict:
+        stock = self.provider.get_stock_snapshot(stock_code)
+        snapshot = self.provider.get_market_snapshot(date)
+        market_mode = self.detect_market_mode(snapshot.total_volume_billion)
+        if market_mode.mode in {"超级天量", "天量"}:
+            focus = "看5/10/20日均线承接，不追高位小票"
+        else:
+            focus = "标准均线和支撑阻力位即可"
+        return {
+            "market_mode": market_mode.mode,
+            "focus": focus,
+            "ma20": stock.ma20,
+            "support": stock.support,
+            "resistance": stock.resistance,
+        }
 
-        Args:
-            stock_code: 股票代码
-
-        Returns:
-            dict: 风险检查结果
-        """
-        # TODO: 接入 mx-finance-search
-        pass
-
-    def analyze_tianliang_adaptation(self, stock_code: str) -> dict:
-        """
-        天量行情适应分析
-
-        在天量行情下（2万亿+），技术指标（RSI/KDJ）会钝化，
-        必须看均线支撑（5/10/20日）和布林线中轨。
-
-        Args:
-            stock_code: 股票代码
-
-        Returns:
-            dict: 适应分析结果
-        """
-        # TODO: AI 分析
-        pass
+    def analyze_stock(self, stock_code: str, date: str | None = None) -> dict:
+        stock = self.provider.get_stock_snapshot(stock_code)
+        market = self.provider.get_market_snapshot(date)
+        news = self.analyze_news_policy(date=date)
+        sentiment = self.analyze_sentiment(date=date)
+        liquidity = self.analyze_liquidity_pattern(date=date)
+        return {
+            "stock": stock.to_dict(),
+            "market": market.to_dict(),
+            "news": news,
+            "sentiment": sentiment,
+            "liquidity": liquidity,
+            "technical": {
+                "above_ma20": stock.above_ma20,
+                "price_position": stock.price_position,
+                "volume_pattern": stock.volume_pattern,
+                "risk_reward_ratio": stock.risk_reward_ratio,
+            },
+        }

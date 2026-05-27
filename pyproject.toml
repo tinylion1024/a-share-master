@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "a-shares-master-skill"
+version = "2.1.0"
+description = "Analyze A-share trades with resilient offline workflows."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "tinylion1024"}]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7,<9"]
+
+[tool.setuptools]
+packages = ["src", "src.config", "src.core", "src.modules", "src.plugins", "src.providers", "src.utils"]

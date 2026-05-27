@@ -1,120 +1,113 @@
-"""
-分析工作流编排器
-整合自: 所有子skill的工作流
-"""
+"""Analysis workflow orchestrator."""
 
-from typing import Optional, Callable
+from __future__ import annotations
+
+from typing import Callable, Optional
+
+from src.config import Config
+from src.core.analyzer import IntegratedAnalyzer
+from src.core.rating import RatingSystem
+from src.core.risk_checker import RiskChecker
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
 
 class AnalysisPipeline:
-    """
-    分析工作流编排器
+    """Run the standard workflow for diagnosis-style prompts."""
 
-    标准工作流：
-    1. 需求澄清 + 场景识别
-    2. 三维看市场（消息/情绪/技术）
-    3. 四维选股评级
-    4. 输出结论（买入价/止损价/目标价/仓位）
-
-    使用方式：
-    pipeline = AnalysisPipeline()
-    result = pipeline.run(stock_code="300750", scenario="诊股", horizon="短线")
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
-        self._steps = []
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
+        self.analyzer = IntegratedAnalyzer(self.config, self.provider)
+        self.rating_system = RatingSystem(self.config, self.provider)
+        self.risk_checker = RiskChecker(self.config, self.provider)
+        self._steps: list[tuple[str, Callable]] = []
 
     def add_step(self, name: str, func: Callable) -> "AnalysisPipeline":
-        """
-        添加分析步骤
-
-        Args:
-            name: 步骤名称
-            func: 步骤函数
-
-        Returns:
-            self: 链式调用
-        """
         self._steps.append((name, func))
         return self
 
     def run(self, stock_code: str, scenario: str, **kwargs) -> dict:
-        """
-        运行分析工作流
-
-        Args:
-            stock_code: 股票代码
-            scenario: 场景（选股/诊股/复盘等）
-            **kwargs: 其他参数（horizon, risk_preference等）
-
-        Returns:
-            dict: 分析结果
-        """
-        context = {
-            "stock_code": stock_code,
-            "scenario": scenario,
-            **kwargs
-        }
-
+        context = {"stock_code": stock_code, "scenario": scenario, **kwargs}
         for name, func in self._steps:
-            result = func(context)
-            context[name] = result
-
+            context[name] = func(context)
         return context
 
-    def run_standard_flow(self, stock_code: str, scenario: str,
-                         horizon: str = "短线",
-                         risk_preference: str = "平衡型") -> dict:
-        """
-        运行标准分析流程
-
-        Args:
-            stock_code: 股票代码
-            scenario: 场景
-            horizon: 持仓周期（短线5日/中线20日/长线60日）
-            risk_preference: 风险偏好（保守型/平衡型/激进型）
-
-        Returns:
-            dict: 分析结果
-        """
+    def run_standard_flow(
+        self,
+        stock_code: str,
+        scenario: str,
+        horizon: str = "短线",
+        risk_preference: str = "平衡型",
+        date: str | None = None,
+    ) -> dict:
         context = {
             "stock_code": stock_code,
             "scenario": scenario,
             "horizon": horizon,
-            "risk_preference": risk_preference
+            "risk_preference": risk_preference,
+            "date": date,
         }
-
-        # Step 0: 需求澄清
         context["needs_clarified"] = self._clarify_needs(context)
-
-        # Step 1: 三维看市场
         context["market_3d"] = self._analyze_market_3d(context)
-
-        # Step 2: 四维选股评级
+        context["risk"] = self.risk_checker.check(stock_code, date).to_dict()
         context["rating_4d"] = self._rate_stock_4d(context)
-
-        # Step 3: 输出结论
         context["conclusion"] = self._generate_conclusion(context)
-
         return context
 
     def _clarify_needs(self, context: dict) -> dict:
-        """Step 0: 需求澄清"""
-        # TODO: 实现需求澄清逻辑
-        return {}
+        return {
+            "scenario": context["scenario"],
+            "horizon": context["horizon"],
+            "risk_preference": context["risk_preference"],
+        }
 
     def _analyze_market_3d(self, context: dict) -> dict:
-        """Step 1: 三维看市场（消息/情绪/技术）"""
-        # TODO: 接入四维分析
-        return {}
+        stock_code = context["stock_code"]
+        date = context.get("date")
+        analysis = self.analyzer.analyze_stock(stock_code, date)
+        return {
+            "news": analysis["news"],
+            "sentiment": analysis["sentiment"],
+            "technical": analysis["technical"],
+        }
 
     def _rate_stock_4d(self, context: dict) -> dict:
-        """Step 2: 四维选股评级"""
-        # TODO: 接入评级系统
-        return {}
+        rating = self.rating_system.rate_stock(context["stock_code"], context.get("date"))
+        return rating.to_dict()
 
     def _generate_conclusion(self, context: dict) -> dict:
-        """Step 3: 输出结论"""
-        # TODO: 生成标准格式结论
-        return {}
+        stock = self.provider.get_stock_snapshot(context["stock_code"])
+        rating = context["rating_4d"]
+        risk = context["risk"]
+        entry_price = round(min(stock.price, stock.resistance * 0.99), 2)
+        stop_loss = round(min(stock.support, entry_price * (1 - self.config.stop_loss_ratio)), 2)
+        target_price = round(
+            max(stock.resistance, entry_price + (entry_price - stop_loss) * self.config.profit_target_multiplier),
+            2,
+        )
+
+        position_ratio = min(self.config.max_single_position, 0.1 + rating["total_score"] / 10)
+        if risk["risk_level"] == "R3":
+            action = "不买"
+            confidence = "低"
+            position_ratio = 0.0
+        elif rating["is_recommended"]:
+            action = "可以买"
+            confidence = "中高" if rating["total_score"] >= 4 else "中"
+        else:
+            action = "观望"
+            confidence = "中"
+
+        summary = (
+            f"{stock.name} 当前属于{context['market_3d']['sentiment']['tone']}环境，"
+            f"四维评级为 {rating['level']}，风险等级 {risk['risk_level']}。"
+        )
+        return {
+            "action": action,
+            "confidence": confidence,
+            "entry_price": entry_price,
+            "stop_loss": stop_loss,
+            "target_price": target_price,
+            "position_ratio": round(position_ratio, 2),
+            "summary": summary,
+        }

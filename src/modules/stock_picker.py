@@ -1,92 +1,105 @@
-"""
-高盈亏比选股系统
-整合自: high-pr-stock-picker, a-share-v2-analyzer
-"""
+"""High risk-reward stock screener."""
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
 from typing import Optional
 
+from src.config import Config
+from src.providers import MarketDataProvider, OfflineFirstProvider
 
-@dataclass
+
+@dataclass(frozen=True)
 class HighPRStock:
-    """高PR股票数据结构"""
+    """Candidate produced by the stock picker."""
+
     code: str
     name: str
     price: float
-    ma20_position: float         # 20日均线位置 (%)
-    boll_position: float        # BOLL轨道位置
-    pe: float                   # 市盈率
-    growth_q1: float            # 一季度增长 (%)
-    turnover_rank: int          # 成交额排名
-    catalyst: str               # 催化因素
-    entry_price: float         # 买入价
-    target_price: float        # 目标价
-    stop_loss: float           # 止损价
-    risk_reward_ratio: float   # 风险收益比
+    ma20_position: float
+    boll_position: float
+    pe: float
+    growth_q1: float
+    turnover_rank: int
+    catalyst: str
+    entry_price: float
+    target_price: float
+    stop_loss: float
+    risk_reward_ratio: float
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
 class HighPRStockPicker:
-    """
-    高盈亏比股票筛选器
+    """Offline-first stock picker."""
 
-    三重过滤链：
-    1. 基础筛选：趋势 + 流动性 + 估值
-       - 股价在20日均线上方
-       - 成交额排名前50
-       - 市盈率 < 40
-    2. 技术提取：均线位置、BOLL轨道、支撑压力位
-    3. 智能合成：结合催化剂（新闻/事件）生成操盘计划
-    """
-
-    def __init__(self, config: Optional[dict] = None):
-        self.config = config or {}
+    def __init__(self, config: Optional[Config] = None, provider: Optional[MarketDataProvider] = None):
+        self.config = config or Config.load()
+        self.provider = provider or OfflineFirstProvider(self.config)
 
     def screen(self, filters: Optional[dict] = None) -> list[HighPRStock]:
-        """
-        筛选高PR股票
+        filter_names = set(filters.get("names", [])) if filters else set()
+        stocks = sorted(self.provider.list_stock_candidates(), key=lambda item: item.turnover_million, reverse=True)
+        ranked: list[HighPRStock] = []
 
-        Args:
-            filters: 筛选条件（如 {"industry": "科技", "pe_max": 30}）
+        for index, stock in enumerate(stocks, start=1):
+            if stock.delisting_risk or stock.under_investigation:
+                continue
+            if "basic" in filter_names and (not stock.above_ma20 or stock.pe > 40):
+                continue
+            if "tech" in filter_names and (stock.momentum_score < 3 or stock.boll_position > 0.9):
+                continue
+            if "catalyst" in filter_names and not stock.catalyst:
+                continue
 
-        Returns:
-            list[HighPRStock]: 高PR股票列表
-        """
-        # TODO: 接入 mx-stocks-screener, mx-finance-data
-        raise NotImplementedError("等待 API 集成")
+            ranked.append(
+                HighPRStock(
+                    code=stock.code,
+                    name=stock.name,
+                    price=stock.price,
+                    ma20_position=round(stock.price / stock.ma20, 2),
+                    boll_position=stock.boll_position,
+                    pe=stock.pe,
+                    growth_q1=stock.q1_growth,
+                    turnover_rank=index,
+                    catalyst=stock.catalyst,
+                    entry_price=round(min(stock.price, stock.resistance * 0.99), 2),
+                    target_price=round(stock.resistance, 2),
+                    stop_loss=round(stock.support, 2),
+                    risk_reward_ratio=stock.risk_reward_ratio,
+                )
+            )
+
+        return sorted(ranked, key=lambda item: item.risk_reward_ratio, reverse=True)
 
     def extract_technical_levels(self, stock_codes: list[str]) -> dict:
-        """提取技术位（MA20, BOLL等）"""
-        # TODO: 接入 mx-finance-data
-        pass
+        result = {}
+        for code in stock_codes:
+            stock = self.provider.get_stock_snapshot(code)
+            result[code] = {
+                "ma20": stock.ma20,
+                "support": stock.support,
+                "resistance": stock.resistance,
+                "boll_position": stock.boll_position,
+            }
+        return result
 
     def synthesize_plan(self, stock: HighPRStock, catalysts: list[str]) -> dict:
-        """
-        综合分析生成操盘计划
-
-        Args:
-            stock: 股票对象
-            catalysts: 催化剂列表（新闻、事件）
-
-        Returns:
-            dict: {entry, target, stop_loss, confidence}
-        """
-        # TODO: 接入 mx-financial-assistant
-        pass
+        confidence = "高" if stock.risk_reward_ratio >= 2.5 else "中"
+        return {
+            "entry": stock.entry_price,
+            "target": stock.target_price,
+            "stop_loss": stock.stop_loss,
+            "confidence": confidence,
+            "catalysts": catalysts,
+        }
 
     def analyze_tianliang_market(self, total_volume: float) -> str:
-        """
-        分析天量行情（>1.5万亿）
-
-        Args:
-            total_volume: 总成交量（亿元）
-
-        Returns:
-            str: 市场模式描述
-        """
         if total_volume > 20000:
-            return "超级天量模式：重点分析大市值中军资金承接，警惕题材小票天地板"
-        elif total_volume > 15000:
-            return "天量模式：重点分析筹码换手率"
-        elif total_volume < 8000:
-            return "缩量模式：重点分析抱团核心及低位稳健股"
+            return "超级天量模式：只做有承接的大中军"
+        if total_volume > 15000:
+            return "天量模式：重视筹码换手和次日承接"
+        if total_volume < 8000:
+            return "缩量模式：只看低位核心"
         return "正常模式"

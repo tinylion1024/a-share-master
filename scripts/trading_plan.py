@@ -1,64 +1,30 @@
 #!/usr/bin/env python3
-"""
-Trading Plan Script - 交易计划脚本
+"""Trading plan script."""
 
-Usage:
-    python3 references/scripts/trading_plan.py --stock 300750 --scenario both
-"""
+from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.cli import render_json, render_trading_plan
+from src.skill import ASharesSkill
 
 
-def generate_trading_plan(stock_code: str, scenario: str) -> str:
-    """生成交易计划"""
-    lines = [
-        f"# 📋 交易计划 - {stock_code} ({datetime.now().strftime('%Y-%m-%d')})",
-        "",
-        "**综合风险等级**: --",
-        "**投资建议**: --",
-        "",
-        "## 🟢 乐观剧本",
-        "",
-        "**触发条件**:",
-        "- 待确认",
-        "",
-        "- **买入价位**: --",
-        "- **目标价位**: --",
-        "- **止损价位**: --",
-        "- **仓位**: --",
-        "- **风险收益比**: --",
-        "",
-        "## 🔴 悲观剧本",
-        "",
-        "**风险信号**:",
-        "- 待确认",
-        "",
-        "**防御动作**:",
-        "- 待确认",
-        "",
-        f"- **止损价位**: --",
-        f"- **最大亏损**: --",
-        "",
-        "---",
-        "*本报告仅供参考，不构成投资建议*",
-    ]
-    return "\n".join(lines)
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="交易计划脚本")
     parser.add_argument("--stock", type=str, required=True, help="股票代码")
-    parser.add_argument("--date", type=str, help="日期 (YYYY-MM-DD)")
-    parser.add_argument(
-        "--scenario",
-        choices=["optimistic", "pessimistic", "both"],
-        default="both",
-        help="场景模式",
-    )
+    parser.add_argument("--date", type=str, default=datetime.now().strftime("%Y-%m-%d"), help="日期 (YYYY-MM-DD)")
+    parser.add_argument("--format", choices=["markdown", "json"], default="markdown", help="输出格式")
     args = parser.parse_args()
 
-    print(generate_trading_plan(args.stock, args.scenario))
+    payload = ASharesSkill().trading_plan_report(args.stock, args.date)
+    print(render_json(payload) if args.format == "json" else render_trading_plan(payload))
 
 
 if __name__ == "__main__":

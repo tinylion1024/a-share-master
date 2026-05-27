@@ -1,55 +1,23 @@
 {
-  "_version": "1.0",
-  "_comment": "用户配置文件，首次运行后自动生成",
-
+  "_version": "2.1",
+  "_comment": "Skill runtime configuration. All keys are optional in offline-first mode.",
   "env": {
     "mx_apikey": "",
     "em_apikey": "",
+    "iwencai_base_url": "https://openapi.iwencai.com",
+    "iwencai_api_key": "",
     "data_cache_dir": "/tmp/a_shares_cache",
-    "log_level": "INFO",
-    "_comment": {
-      "mx_apikey": "MX API 密钥",
-      "em_apikey": "东方财富 API 密钥",
-      "data_cache_dir": "数据缓存目录",
-      "log_level": "日志级别: DEBUG/INFO/WARNING/ERROR"
-    }
+    "sample_data_path": "",
+    "offline_mode": true,
+    "log_level": "INFO"
   },
-
-  "user": {
-    "name": "散户",
-    "style": "balanced",
-    "_comment": {
-      "style": "投资风格: conservative(保守)/balanced(平衡)/aggressive(激进)"
-    }
-  },
-
   "trading": {
     "max_position_per_stock": 0.3,
     "max_total_position": 0.5,
     "stop_loss_rate": 0.07,
-    "profit_target_multiplier": 3,
-    "_comment": {
-      "max_position_per_stock": "单只最大仓位 (0.3=30%)",
-      "max_total_position": "总仓位最大 (0.5=50%)",
-      "stop_loss_rate": "止损比例 (0.07=7%)",
-      "profit_target_multiplier": "止盈为目标止损距离倍数"
-    }
+    "profit_target_multiplier": 3
   },
-
   "filters": {
-    "min_daily_volume": 50000000,
-    "min_price": 1,
-    "max_price": 500,
-    "_comment": {
-      "min_daily_volume": "最小日成交额 (元)",
-      "min_price": "最低股价 (元)",
-      "max_price": "最高股价 (元)"
-    }
-  },
-
-  "display": {
-    "show_probability": true,
-    "show_risk_analysis": true,
-    "show_detailed_reasoning": true
+    "min_daily_volume": 50000000
   }
 }

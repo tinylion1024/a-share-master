@@ -1,56 +1,29 @@
 #!/usr/bin/env python3
-"""
-Risk Check Script - 风险扫描脚本
+"""Risk scanner script."""
 
-Usage:
-    python3 references/scripts/check_risk.py --code 300750
-"""
+from __future__ import annotations
 
 import argparse
-import json
-import os
 import sys
-from datetime import datetime
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.cli import render_json, render_risk_report
+from src.skill import ASharesSkill
 
 
-def check_risk(stock_code: str) -> dict:
-    """
-    检查股票风险
-
-    Returns:
-        dict: 风险报告
-    """
-    # TODO: 实现实际的风险检查逻辑
-    # 目前返回模拟数据
-
-    return {
-        "code": stock_code,
-        "name": f"股票{stock_code}",
-        "risk_level": "R2",
-        "risk_type": "normal",
-        "description": "暂无明显风险",
-        "details": {
-            "investigation": False,
-            "delist_risk": False,
-            "reduction": False,
-            "earnings_window": False,
-        },
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="风险扫描脚本")
     parser.add_argument("--code", type=str, required=True, help="股票代码")
+    parser.add_argument("--date", type=str, help="日期 (YYYY-MM-DD)")
+    parser.add_argument("--format", choices=["markdown", "json"], default="json", help="输出格式")
     args = parser.parse_args()
 
-    # 检查环境变量
-    em_api_key = os.getenv("EM_API_KEY", "")
-    if not em_api_key:
-        print("警告: EM_API_KEY 未设置", file=sys.stderr)
-
-    result = check_risk(args.code)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    payload = ASharesSkill().risk(args.code, args.date)
+    print(render_json(payload) if args.format == "json" else render_risk_report(payload))
 
 
 if __name__ == "__main__":
